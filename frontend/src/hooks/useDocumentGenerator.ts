@@ -14,7 +14,7 @@ interface GenerateInput {
   budgetYear3Total: number;
   budgetGrandTotal: number;
   teamTotalSalary: number;
-  isCategoryA: boolean;
+  horizon: number;
 }
 
 function formatDate(dateString: string): string {
@@ -38,7 +38,7 @@ export function useDocumentGenerator() {
       budgetYear3Total,
       budgetGrandTotal,
       teamTotalSalary,
-      isCategoryA,
+      horizon,
     }: GenerateInput): Promise<void> => {
       const payload: Record<string, string | number | Record<string, string | number>[]> = {};
 
@@ -48,7 +48,7 @@ export function useDocumentGenerator() {
 
       payload['date'] = formatDate(payload['date'] as string);
 
-      if (isCategoryA) {
+      if (horizon >= 3) {
         payload['f4_7_3'] = budgetYear3Total.toFixed(1);
       }
 

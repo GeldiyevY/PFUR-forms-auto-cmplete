@@ -4,11 +4,11 @@ import type { KpiData } from '../types/form';
 
 interface KpiSectionProps {
   data: KpiData;
-  isCategoryA: boolean;
+  horizon: number;
   onChange: (kpeIndex: string, field: string, value: string | number) => void;
 }
 
-export default function KpiSection({ data, isCategoryA, onChange }: KpiSectionProps) {
+export default function KpiSection({ data, horizon, onChange }: KpiSectionProps) {
   const kpeList: { kpeId: keyof KpiData; title: string; stage1Label?: string; stage2Label?: string; stage3Label?: string }[] = [
     {
       kpeId: 'kpe1',
@@ -68,7 +68,7 @@ export default function KpiSection({ data, isCategoryA, onChange }: KpiSectionPr
           key={kpe.kpeId}
           title={kpe.title}
           data={data[kpe.kpeId]}
-          isCategoryA={isCategoryA}
+          horizon={horizon}
           stage1Label={kpe.stage1Label}
           stage2Label={kpe.stage2Label}
           stage3Label={kpe.stage3Label}

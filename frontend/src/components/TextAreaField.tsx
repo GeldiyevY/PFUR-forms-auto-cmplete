@@ -1,34 +1,38 @@
 import { useState } from 'react';
-import { useCharCounter } from '../hooks/useCharCounter';
 
-interface CharCounterTextareaProps {
-  id: string;
+interface TextAreaFieldProps {
+  id?: string;
+  name?: string;
   label: string;
-  maxLength: number;
+  value: string;
+  onChange: (value: string) => void;
   hint?: string;
   underField?: string | null;
   underFieldColor?: string;
   showHintBelowField?: boolean;
-  value: string;
-  onChange: (value: string) => void;
   required?: boolean;
+  maxLength?: number;
+  readOnly?: boolean;
+  className?: string;
 }
 
-export default function CharCounterTextarea({
+export default function TextAreaField({
   id,
+  name,
   label,
-  maxLength,
+  value,
+  onChange,
   hint,
   underField = null,
   underFieldColor,
   showHintBelowField = true,
-  value,
-  onChange,
   required,
-}: CharCounterTextareaProps) {
+  maxLength,
+  readOnly,
+  className,
+}: TextAreaFieldProps) {
   const [focused, setFocused] = useState(false);
   const empty = value.trim() === '';
-  const { count, color } = useCharCounter(maxLength);
 
   const active = focused || !empty;
   const showHintBelow = underField === null && !!hint && showHintBelowField && active;
@@ -37,27 +41,28 @@ export default function CharCounterTextarea({
   const belowText = showUnderField ? underField : showHintBelow ? hint : null;
   const belowColor = showUnderField ? underFieldColor : undefined;
 
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
-  };
-
   return (
-    <div className="form-group">
+    <div className={`form-group${className ? ` ${className}` : ''}`}>
       <label htmlFor={id}>{label}</label>
       <textarea
         id={id}
-        name={id}
+        name={name ?? id}
         required={required}
         maxLength={maxLength}
+        readOnly={readOnly}
+        tabIndex={readOnly ? -1 : undefined}
         placeholder={placeholder}
         value={value}
+        onMouseDown={(e) => {
+          if (readOnly) {
+            e.preventDefault();
+            (document.activeElement as HTMLElement | null)?.blur();
+          }
+        }}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        onChange={handleInput}
+        onChange={(e) => onChange(e.target.value)}
       />
-      <div className="char-counter">
-        <span style={{ color }}>{count}</span>/{maxLength} символов
-      </div>
       {belowText && (
         <div className="field-hint" style={belowColor ? { color: belowColor } : undefined}>
           {belowText}

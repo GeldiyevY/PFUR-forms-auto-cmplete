@@ -3,7 +3,7 @@ interface BudgetTotalRowProps {
   year2: number;
   year3: number;
   grandTotal: number;
-  isCategoryA: boolean;
+  horizon: number;
 }
 
 export default function BudgetTotalRow({
@@ -11,8 +11,10 @@ export default function BudgetTotalRow({
   year2,
   year3,
   grandTotal,
-  isCategoryA,
+  horizon,
 }: BudgetTotalRowProps) {
+  const showYear3 = horizon >= 3;
+
   return (
     <div className="form-group total-row">
       <h4>
@@ -41,7 +43,7 @@ export default function BudgetTotalRow({
             value={year2.toFixed(1)}
           />
         </div>
-        {isCategoryA && (
+        {showYear3 && (
           <div className="form-group">
             <label htmlFor="">
               <strong>3 год (тыс. руб.)</strong>
@@ -56,7 +58,7 @@ export default function BudgetTotalRow({
         )}
         <div className="form-group">
           <label htmlFor="">
-            <strong>ОБЩИЙ ИТОГО (тыс. руб.)</strong>
+            <strong>ОБЩИЙ ИТОГ (тыс. руб.)</strong>
           </label>
           <input
             type="number"

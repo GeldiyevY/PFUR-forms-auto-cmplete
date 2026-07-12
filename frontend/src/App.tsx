@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from './components/Header';
 import StatusAlert from './components/StatusAlert';
 import ButtonContainer from './components/ButtonContainer';
@@ -11,7 +11,6 @@ import ExpenseBreakdown from './sections/ExpenseBreakdown';
 import PersonalData from './sections/PersonalData';
 import OrganizationInfo from './sections/OrganizationInfo';
 import { useTemplate } from './hooks/useTemplate';
-import { useCategoryToggle } from './hooks/useCategoryToggle';
 import { useBudgetCalculations } from './hooks/useBudgetCalculations';
 import { useTeamMembers } from './hooks/useTeamMembers';
 import { useExpenseItems } from './hooks/useExpenseItems';
@@ -22,17 +21,24 @@ import type {
   KpiStageData,
   AlertType,
 } from './types/form';
+import type { GrantTypeId, GrantCategory } from './types/grantTypes';
+import {
+  createGrantType,
+  fromDisplayCategory,
+  toDisplayCategory,
+} from './types/grantTypes';
 import './App.css';
+
+const DEFAULT_DOC_TYPE: GrantTypeId = 'R.1';
 
 function createDefaultFormData(): FormData {
   return {
     project_name: '',
     key_words: '',
-    sience_field: '',
+    science_field: '',
     research_direction: '',
-    project_category: '',
+    project_category: 'А',
     project_annotation: '',
-    project_objective: '',
     project_goal: '',
     project_tasks: '',
     research_description: '',
@@ -45,7 +51,7 @@ function createDefaultFormData(): FormData {
     full_name_of_np: '',
     head_of_project: '',
     head_of_np: '',
-    head_of_project_qualifications: '',
+    head_of_project_qualification: '',
     date: '',
     organization_name: '',
     organization_info: '',
@@ -68,42 +74,41 @@ function createDefaultKpiData(): KpiData {
   };
 }
 
-const REQUIRED_FIELDS: (keyof FormData)[] = [
-  'project_name',
-  'key_words',
-  'sience_field',
-  'research_direction',
-  'project_category',
-  'project_annotation',
-  'name_of_np',
-  'head_of_project',
-  'head_of_np',
-  'date',
-];
-
 const FIELD_LABELS: Record<string, string> = {
   project_name: 'Название проекта',
   key_words: 'Ключевые слова',
-  sience_field: 'Область науки',
+  science_field: 'Область науки',
   research_direction: 'Направление исследования',
   project_category: 'Категория проекта',
   project_annotation: 'Аннотация проекта',
   name_of_np: 'Название подразделения РУДН',
   head_of_project: 'Руководитель проекта',
   head_of_np: 'Руководитель ОУП / НП',
-  date: 'Дата',
+  date: 'Дата рождения',
 };
 
 export default function App() {
   const { buffer: templateBuffer, loading: templateLoading, error: templateError, loadTemplate } = useTemplate();
-  const { isCategoryA, handleCategoryChange } = useCategoryToggle();
-  const { lines, totals, year1Total, year2Total, year3Total, grandTotal, updateLine } =
-    useBudgetCalculations(isCategoryA);
+
+  const [docType, setDocType] = useState<GrantTypeId>(DEFAULT_DOC_TYPE);
+  const grantType = useMemo(() => createGrantType(docType), [docType]);
 
   const [formData, setFormData] = useState<FormData>(createDefaultFormData);
   const [kpiData, setKpiData] = useState<KpiData>(createDefaultKpiData);
   const [alert, setAlert] = useState<{ type: AlertType; message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const currentCategory = useMemo((): GrantCategory => {
+    const cat = fromDisplayCategory(formData.project_category);
+    const valid = grantType.categoryConfigs.find((c) => c.value === cat);
+    return valid ? valid.value : grantType.categoryConfigs[0].value;
+  }, [formData.project_category, grantType]);
+
+  const currentConfig = grantType.getCategoryConfig(currentCategory);
+  const horizon = currentConfig.workPlanHorizon;
+
+  const { lines, totals, year1Total, year2Total, year3Total, grandTotal, updateLine } =
+    useBudgetCalculations(horizon);
 
   const {
     members: teamMembers,
@@ -144,22 +149,40 @@ export default function App() {
     });
   }, [syncLeadName]);
 
-  const handleCategoryChangeWrapper = useCallback(
-    (value: string) => {
-      handleCategoryChange(value);
-      setFormData((prev) => ({ ...prev, project_category: value as FormData['project_category'] }));
-      if (value !== 'А') {
-        setKpiData((prev) => {
-          const next = { ...prev };
-          for (const key of Object.keys(next) as (keyof KpiData)[]) {
-            next[key] = { ...next[key], stage3: 0 };
-          }
-          return next;
-        });
-      }
-    },
-    [handleCategoryChange],
-  );
+  const handleDocTypeChange = useCallback((id: GrantTypeId) => {
+    setDocType(id);
+    const newGrantType = createGrantType(id);
+    const firstCat = newGrantType.categoryConfigs[0];
+    setFormData((prev) => ({
+      ...prev,
+      project_category: toDisplayCategory(firstCat.value) as FormData['project_category'],
+    }));
+    if (firstCat.workPlanHorizon < 3) {
+      setKpiData((prev) => {
+        const next = { ...prev };
+        for (const key of Object.keys(next) as (keyof KpiData)[]) {
+          next[key] = { ...next[key], stage3: 0 };
+        }
+        return next;
+      });
+    }
+  }, []);
+
+  const handleCategoryChange = useCallback((value: string) => {
+    setFormData((prev) => ({ ...prev, project_category: value as FormData['project_category'] }));
+    const cat = fromDisplayCategory(value);
+    if (!cat) return;
+    const conf = grantType.getCategoryConfig(cat);
+    if (conf.workPlanHorizon < 3) {
+      setKpiData((prev) => {
+        const next = { ...prev };
+        for (const key of Object.keys(next) as (keyof KpiData)[]) {
+          next[key] = { ...next[key], stage3: 0 };
+        }
+        return next;
+      });
+    }
+  }, [grantType]);
 
   const updateKpiField = useCallback(
     (kpeIndex: string, field: string, value: string | number) => {
@@ -171,9 +194,14 @@ export default function App() {
     [],
   );
 
+  const requiredFields = useMemo(
+    () => grantType.getRequiredFields(currentCategory),
+    [grantType, currentCategory],
+  );
+
   const validateForm = useCallback((): boolean => {
     const missing: string[] = [];
-    for (const field of REQUIRED_FIELDS) {
+    for (const field of requiredFields) {
       if (!formData[field].trim()) {
         missing.push(FIELD_LABELS[field] || field);
       }
@@ -183,7 +211,7 @@ export default function App() {
       return false;
     }
     return true;
-  }, [formData]);
+  }, [formData, requiredFields]);
 
   const handleGenerate = useCallback(async () => {
     if (!templateBuffer) {
@@ -199,7 +227,7 @@ export default function App() {
     try {
       await generate({
         templateBuffer,
-        formData: { ...formData, project_category: isCategoryA ? 'А' : 'Б' },
+        formData: { ...formData, project_category: toDisplayCategory(currentCategory) as 'А' | 'Б' },
         teamMembers,
         expenseItems,
         budgetYear1Total: year1Total,
@@ -207,7 +235,7 @@ export default function App() {
         budgetYear3Total: year3Total,
         budgetGrandTotal: grandTotal,
         teamTotalSalary,
-        isCategoryA,
+        horizon,
       });
       setAlert({ type: 'success', message: `Документ "Заявка ${formData.project_name}.docx" успешно создан и скачан!` });
     } catch (err) {
@@ -216,7 +244,7 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [templateBuffer, formData, isCategoryA, teamMembers, expenseItems, year1Total, year2Total, year3Total, grandTotal, teamTotalSalary, generate, validateForm]);
+  }, [templateBuffer, formData, currentCategory, teamMembers, expenseItems, year1Total, year2Total, year3Total, grandTotal, teamTotalSalary, horizon, generate, validateForm]);
 
   const fillTestData = useCallback(() => {
     const d = new Date();
@@ -225,11 +253,10 @@ export default function App() {
     setFormData({
       project_name: 'Разработка инновационной системы искусственного интеллекта для медицинской диагностики',
       key_words: 'искусственный интеллект, медицинская диагностика, машинное обучение, нейронные сети, цифровая медицина',
-      sience_field: 'ГРНТИ 28.23.37 - Искусственный интеллект; ОЭСР 1.02 - Информатика; Приоритетное направление СНТР - Информационно-телекоммуникационные системы',
+      science_field: 'ГРНТИ 28.23.37 - Искусственный интеллект; ОЭСР 1.02 - Информатика; Приоритетное направление СНТР - Информационно-телекоммуникационные системы',
       research_direction: 'Прикладное',
       project_category: 'А',
       project_annotation: 'Проект направлен на создание интеллектуальной системы медицинской диагностики на основе глубокого машинного обучения. Система будет анализировать медицинские изображения и данные для повышения точности диагностики онкологических заболеваний.',
-      project_objective: 'Медицинские изображения (рентген, МРТ, КТ) и клинические данные пациентов',
       project_goal: 'Создание высокоточной системы автоматической диагностики онкологических заболеваний с использованием технологий искусственного интеллекта.',
       project_tasks: '1. Разработка алгоритмов глубокого обучения; 2. Создание базы данных медицинских изображений; 3. Обучение нейронных сетей; 4. Валидация системы в клинических условиях.',
       research_description: 'Актуальность исследования обусловлена растущей потребностью в точной и быстрой медицинской диагностике. Современные методы машинного обучения показывают высокую эффективность в анализе медицинских изображений. Проект адекватен мировому уровню науки, использует передовые архитектуры нейронных сетей.',
@@ -242,7 +269,7 @@ export default function App() {
       full_name_of_np: 'Петров Петр Петрович',
       head_of_project: 'Иванов Иван Иванович',
       head_of_np: 'Петров Петр Петрович',
-      head_of_project_qualifications: 'Иванов Иван Иванович, профессор, д.т.н. 50+ публикаций, 3 патента, руководство 15 НИР/НИОКР.',
+      head_of_project_qualification: 'Иванов Иван Иванович, профессор, д.т.н. 50+ публикаций, 3 патента, руководство 15 НИР/НИОКР.',
       date: dateStr,
       organization_name: 'Российский университет дружбы народов имени Патриса Лумумбы',
       organization_info: 'ИНН: 7729086366, ОГРН: 1027739661538, КПП: 772901001. Адрес: 117198, г. Москва, ул. Миклухо-Маклая, д. 6.',
@@ -250,8 +277,6 @@ export default function App() {
       main_accountant_of_organization: 'Сидорова Анна Владимировна',
       position: 'Ректор университета',
     });
-
-    handleCategoryChange('А');
 
     setKpiData({
       kpe1: { stage1: 2, stage2: 3, stage3: 2, comment: 'Публикации в IEEE' },
@@ -337,11 +362,7 @@ export default function App() {
         }
       });
     }, 500);
-
-    // We can't easily set values on dynamically created inputs via React state
-    // because addTeamMember/addExpenseItem increments internal counters.
-    // Instead we use timeouts to batch-set after the DOM is ready.
-  }, [updateLine, updateTeamMember, addTeamMember, addExpenseItem, handleCategoryChange]);
+  }, [updateLine, updateTeamMember, addTeamMember, addExpenseItem]);
 
   useEffect(() => {
     if (formData.head_of_project) {
@@ -352,7 +373,10 @@ export default function App() {
   return (
     <>
       <div className="container">
-        <Header />
+        <Header
+          selectedDocType={docType}
+          onDocTypeChange={handleDocTypeChange}
+        />
 
         <div className="form-container">
           <div className="status-messages">
@@ -368,48 +392,59 @@ export default function App() {
           <form id="document-form">
             <ProjectGeneralInfo
               data={formData}
+              grantType={grantType}
               onChange={updateFormField}
-              onCategoryChange={handleCategoryChangeWrapper}
+              onCategoryChange={handleCategoryChange}
             />
 
             <ProjectDescription data={formData} onChange={updateFormField} />
 
-            <RudnDepartment data={formData} onChange={updateFormField} />
+            {grantType.hasRudnDepartment && (
+              <RudnDepartment data={formData} onChange={updateFormField} />
+            )}
 
-            <KpiSection
-              data={kpiData}
-              isCategoryA={isCategoryA}
-              onChange={updateKpiField}
-            />
+            {grantType.hasKpi && (
+              <KpiSection
+                data={kpiData}
+                horizon={horizon}
+                onChange={updateKpiField}
+              />
+            )}
 
-            <BudgetSection
-              lines={lines}
-              totals={totals}
-              year1Total={year1Total}
-              year2Total={year2Total}
-              year3Total={year3Total}
-              grandTotal={grandTotal}
-              isCategoryA={isCategoryA}
-              onBudgetChange={updateLine}
-              teamMembers={teamMembers}
-              teamTotalSalary={teamTotalSalary}
-              leadName={formData.head_of_project}
-              onTeamUpdate={updateTeamMember}
-              onTeamRemove={removeTeamMember}
-              onTeamAdd={addTeamMember}
-            />
+            {grantType.hasBudget && (
+              <BudgetSection
+                lines={lines}
+                totals={totals}
+                year1Total={year1Total}
+                year2Total={year2Total}
+                year3Total={year3Total}
+                grandTotal={grandTotal}
+                horizon={horizon}
+                onBudgetChange={updateLine}
+                teamMembers={grantType.hasTeamMembers ? teamMembers : []}
+                teamTotalSalary={grantType.hasTeamMembers ? teamTotalSalary : 0}
+                leadName={formData.head_of_project}
+                onTeamUpdate={updateTeamMember}
+                onTeamRemove={removeTeamMember}
+                onTeamAdd={addTeamMember}
+              />
+            )}
 
-            <ExpenseBreakdown
-              items={expenseItems}
-              totals={expenseTotals}
-              onAddItem={addExpenseItem}
-              onUpdateItem={updateExpenseItem}
-              onRemoveItem={removeExpenseItem}
-            />
+            {grantType.hasExpenseBreakdown && (
+              <ExpenseBreakdown
+                items={expenseItems}
+                totals={expenseTotals}
+                onAddItem={addExpenseItem}
+                onUpdateItem={updateExpenseItem}
+                onRemoveItem={removeExpenseItem}
+              />
+            )}
 
             <PersonalData data={formData} onChange={updateFormField} />
 
-            <OrganizationInfo data={formData} onChange={updateFormField} />
+            {grantType.hasOrganizationInfo && (
+              <OrganizationInfo data={formData} onChange={updateFormField} />
+            )}
 
             <ButtonContainer
               onTestFill={fillTestData}

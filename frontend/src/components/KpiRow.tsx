@@ -1,67 +1,66 @@
+import TextField from './TextField';
+import TextAreaField from './TextAreaField';
 import type { KpiStageData } from '../types/form';
 
 interface KpiRowProps {
   title: string;
   data: KpiStageData;
-  isCategoryA: boolean;
-  onChange: (field: keyof KpiStageData, value: string | number) => void;
   stage1Label?: string;
   stage2Label?: string;
   stage3Label?: string;
+  horizon: number;
+  onChange: (field: keyof KpiStageData, value: string | number) => void;
 }
 
 export default function KpiRow({
   title,
   data,
-  isCategoryA,
-  onChange,
   stage1Label = '1-й этап',
   stage2Label = '2-й этап',
-  stage3Label = '3-й этап - только для категории А',
+  stage3Label = '3-й этап',
+  horizon,
+  onChange,
 }: KpiRowProps) {
   return (
     <div className="form-group">
       <h3>{title}</h3>
       <div className="kpe-row">
-        <div className="form-group">
-          <label htmlFor="">{stage1Label}</label>
-          <input
+        <TextField
+          label={stage1Label}
+          type="number"
+          min="0"
+          hint="0"
+          showHintBelowField={false}
+          value={data.stage1 || ''}
+          onChange={(v) => onChange('stage1', v === '' ? 0 : parseFloat(v))}
+        />
+        <TextField
+          label={stage2Label}
+          type="number"
+          min="0"
+          hint="0"
+          showHintBelowField={false}
+          value={data.stage2 || ''}
+          onChange={(v) => onChange('stage2', v === '' ? 0 : parseFloat(v))}
+        />
+        {horizon >= 3 && (
+          <TextField
+            label={stage3Label}
             type="number"
             min="0"
-            placeholder="0"
-            value={data.stage1 || ''}
-            onChange={(e) => onChange('stage1', e.target.value === '' ? 0 : parseFloat(e.target.value))}
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="">{stage2Label}</label>
-          <input
-            type="number"
-            min="0"
-            placeholder="0"
-            value={data.stage2 || ''}
-            onChange={(e) => onChange('stage2', e.target.value === '' ? 0 : parseFloat(e.target.value))}
-          />
-        </div>
-        <div className={`form-group${isCategoryA ? '' : ' category-a-only'}`}>
-          {isCategoryA && <label htmlFor="">{stage3Label}</label>}
-          {!isCategoryA && <label htmlFor="">{stage3Label}</label>}
-          <input
-            type="number"
-            min="0"
-            placeholder="0"
+            hint="0"
+            showHintBelowField={false}
             value={data.stage3 || ''}
-            onChange={(e) => onChange('stage3', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+            onChange={(v) => onChange('stage3', v === '' ? 0 : parseFloat(v))}
           />
-        </div>
-        <div className="form-group">
-          <label htmlFor="">Комментарий руководителя</label>
-          <textarea
-            placeholder="Комментарий к КПЭ"
-            value={data.comment}
-            onChange={(e) => onChange('comment', e.target.value)}
-          />
-        </div>
+        )}
+        <TextAreaField
+          label="Комментарий руководителя"
+          hint="Комментарий к КПЭ"
+          className={horizon >= 3 ? undefined : 'kpe-comment-wide'}
+          value={data.comment}
+          onChange={(v) => onChange('comment', v)}
+        />
       </div>
     </div>
   );

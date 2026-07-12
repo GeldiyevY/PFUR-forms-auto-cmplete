@@ -1,3 +1,4 @@
+import TextField from './TextField';
 import type { TeamMember as TeamMemberType } from '../types/form';
 
 interface TeamMemberProps {
@@ -27,34 +28,30 @@ export default function TeamMemberCard({
         </button>
       )}
       <div className="two-column">
-        <div className="form-group">
-          <label htmlFor="">ФИО, должность в научном коллективе, доля ставки</label>
-          <input
-            type="text"
-            placeholder={
-              isLead
-                ? 'Руководитель проекта (автоматически)'
-                : 'Фамилия И.О., должность, доля ставки'
-            }
-            value={isLead ? '' : member.name}
-            readOnly={isLead}
-            className={isLead ? 'readonly-field' : ''}
-            onChange={(e) => onUpdate(member.id, 'name', e.target.value)}
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="">Годовой ФОТ (тыс. руб.)</label>
-          <input
-            type="number"
-            min="0"
-            step="0.1"
-            placeholder="0.0"
-            value={member.salary || ''}
-            onChange={(e) =>
-              onUpdate(member.id, 'salary', e.target.value === '' ? 0 : parseFloat(e.target.value))
-            }
-          />
-        </div>
+        <TextField
+          label="ФИО, должность в научном коллективе, доля ставки"
+          value={isLead ? '' : member.name}
+          hint={
+            isLead
+              ? 'Руководитель проекта (автоматически)'
+              : 'Фамилия И.О., должность, доля ставки'
+          }
+          readOnly={isLead}
+          inputClassName={isLead ? 'readonly-field' : ''}
+          onChange={(v) => onUpdate(member.id, 'name', v)}
+        />
+        <TextField
+          label="Годовой ФОТ (тыс. руб.)"
+          type="number"
+          min="0"
+          step="0.1"
+          hint="0.0"
+          showHintBelowField={false}
+          value={member.salary || ''}
+          onChange={(v) =>
+            onUpdate(member.id, 'salary', v === '' ? 0 : parseFloat(v))
+          }
+        />
       </div>
     </div>
   );

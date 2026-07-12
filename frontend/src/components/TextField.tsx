@@ -1,34 +1,45 @@
 import { useState } from 'react';
-import { useCharCounter } from '../hooks/useCharCounter';
 
-interface CharCounterTextareaProps {
-  id: string;
+interface TextFieldProps {
+  id?: string;
+  name?: string;
   label: string;
-  maxLength: number;
+  value: string | number;
+  onChange: (value: string) => void;
   hint?: string;
   underField?: string | null;
   underFieldColor?: string;
   showHintBelowField?: boolean;
-  value: string;
-  onChange: (value: string) => void;
   required?: boolean;
+  type?: 'text' | 'number' | 'date';
+  maxLength?: number;
+  readOnly?: boolean;
+  inputClassName?: string;
+  min?: string | number;
+  step?: string | number;
 }
 
-export default function CharCounterTextarea({
+export default function TextField({
   id,
+  name,
   label,
-  maxLength,
+  value,
+  onChange,
   hint,
   underField = null,
   underFieldColor,
   showHintBelowField = true,
-  value,
-  onChange,
   required,
-}: CharCounterTextareaProps) {
+  type = 'text',
+  maxLength,
+  readOnly,
+  inputClassName,
+  min,
+  step,
+}: TextFieldProps) {
   const [focused, setFocused] = useState(false);
-  const empty = value.trim() === '';
-  const { count, color } = useCharCounter(maxLength);
+  const stringValue = value === null || value === undefined ? '' : String(value);
+  const empty = stringValue.trim() === '';
 
   const active = focused || !empty;
   const showHintBelow = underField === null && !!hint && showHintBelowField && active;
@@ -37,27 +48,32 @@ export default function CharCounterTextarea({
   const belowText = showUnderField ? underField : showHintBelow ? hint : null;
   const belowColor = showUnderField ? underFieldColor : undefined;
 
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
-  };
-
   return (
     <div className="form-group">
       <label htmlFor={id}>{label}</label>
-      <textarea
+      <input
         id={id}
-        name={id}
+        name={name ?? id}
+        type={type}
         required={required}
         maxLength={maxLength}
+        readOnly={readOnly}
+        tabIndex={readOnly ? -1 : undefined}
+        min={min}
+        step={step}
+        className={inputClassName}
         placeholder={placeholder}
-        value={value}
+        value={stringValue}
+        onMouseDown={(e) => {
+          if (readOnly) {
+            e.preventDefault();
+            (document.activeElement as HTMLElement | null)?.blur();
+          }
+        }}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        onChange={handleInput}
+        onChange={(e) => onChange(e.target.value)}
       />
-      <div className="char-counter">
-        <span style={{ color }}>{count}</span>/{maxLength} символов
-      </div>
       {belowText && (
         <div className="field-hint" style={belowColor ? { color: belowColor } : undefined}>
           {belowText}

@@ -1,11 +1,10 @@
 export interface FormData {
   project_name: string;
   key_words: string;
-  sience_field: string;
+  science_field: string;
   research_direction: string;
-  project_category: 'А' | 'Б' | '';
+  project_category: "А" | "Б" | "";
   project_annotation: string;
-  project_objective: string;
   project_goal: string;
   project_tasks: string;
   research_description: string;
@@ -18,7 +17,7 @@ export interface FormData {
   full_name_of_np: string;
   head_of_project: string;
   head_of_np: string;
-  head_of_project_qualifications: string;
+  head_of_project_qualification: string;
   date: string;
   organization_name: string;
   organization_info: string;
@@ -63,9 +62,9 @@ export interface ExpenseItem {
   price: number;
 }
 
-export type ExpenseCategoryType = 'equipment' | 'travel' | 'services' | 'other';
+export type ExpenseCategoryType = "equipment" | "travel" | "services" | "other";
 
-export type AlertType = 'success' | 'error';
+export type AlertType = "success" | "error";
 
 export interface TemplateState {
   buffer: Uint8Array | null;

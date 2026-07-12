@@ -12,7 +12,7 @@ interface BudgetSectionProps {
   year2Total: number;
   year3Total: number;
   grandTotal: number;
-  isCategoryA: boolean;
+  horizon: number;
   onBudgetChange: (key: BudgetKey, field: 'year1' | 'year2' | 'year3', value: number) => void;
   teamMembers: TeamMemberType[];
   teamTotalSalary: number;
@@ -38,7 +38,7 @@ export default function BudgetSection({
   year2Total,
   year3Total,
   grandTotal,
-  isCategoryA,
+  horizon,
   onBudgetChange,
   teamMembers,
   teamTotalSalary,
@@ -59,7 +59,7 @@ export default function BudgetSection({
             year2={lines[item.key].year2}
             year3={lines[item.key].year3}
             total={totals[i].total}
-            isCategoryA={isCategoryA}
+            horizon={horizon}
             onChange={(field, value) => onBudgetChange(item.key, field, value)}
           />
         ))}
@@ -69,7 +69,7 @@ export default function BudgetSection({
           year2={year2Total}
           year3={year3Total}
           grandTotal={grandTotal}
-          isCategoryA={isCategoryA}
+          horizon={horizon}
         />
       </div>
 
