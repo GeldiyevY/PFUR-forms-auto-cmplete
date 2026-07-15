@@ -1,7 +1,7 @@
-import Section from '../components/Section';
 import BudgetRow from '../components/BudgetRow';
 import BudgetTotalRow from '../components/BudgetTotalRow';
 import TeamMemberCard from '../components/TeamMember';
+import { FieldInfo } from '../uielements/FieldInfo';
 import type { BudgetKey } from '../hooks/useBudgetCalculations';
 import type { BudgetLine, TeamMember as TeamMemberType } from '../types/form';
 
@@ -20,6 +20,9 @@ interface BudgetSectionProps {
   onTeamUpdate: (id: number, field: 'name' | 'salary', value: string | number) => void;
   onTeamRemove: (id: number) => void;
   onTeamAdd: () => void;
+  detail?: string | null;
+  minTeamSize?: number;
+  maxTeamSize?: number;
 }
 
 const BUDGET_LABELS: { key: BudgetKey; label: string }[] = [
@@ -30,6 +33,20 @@ const BUDGET_LABELS: { key: BudgetKey; label: string }[] = [
   { key: 'services', label: '5. Научно-технические услуги / работы сторонних организаций' },
   { key: 'other', label: '6. Прочие расходы, непосредственно связанные с выполняемым проектом' },
 ];
+
+function buildTeamWarning(
+  count: number,
+  minTeamSize?: number,
+  maxTeamSize?: number,
+): string | null {
+  if (minTeamSize != null && count < minTeamSize) {
+    return `Рекомендуемый минимальный состав научного коллектива — не менее ${minTeamSize} чел. (сейчас: ${count}).`;
+  }
+  if (maxTeamSize != null && count > maxTeamSize) {
+    return `Рекомендуемый максимальный состав научного коллектива — не более ${maxTeamSize} чел. (сейчас: ${count}).`;
+  }
+  return null;
+}
 
 export default function BudgetSection({
   lines,
@@ -45,13 +62,19 @@ export default function BudgetSection({
   onTeamUpdate,
   onTeamRemove,
   onTeamAdd,
+  detail,
+  minTeamSize,
+  maxTeamSize,
 }: BudgetSectionProps) {
   return (
-    <Section title="Форма 4 - Проект сметы расходов основных средств гранта">
+    <>
       <div className="budget-table">
-        <h3>Смета расходов по годам (тыс. руб.)</h3>
+        <h3>
+          Смета расходов по годам (тыс. руб.)
+          <FieldInfo detail={detail ?? null} />
+        </h3>
 
-        {BUDGET_LABELS.map((item, i) => (
+      {BUDGET_LABELS.map((item, i) => (
           <BudgetRow
             key={item.key}
             label={item.label}
@@ -80,18 +103,31 @@ export default function BudgetSection({
 
         <div id="team-members">
           {teamMembers.map((member, idx) => (
-            <TeamMemberCard
-              key={member.id}
-              member={member}
-              index={idx}
-              isLead={idx === 0}
-              onUpdate={onTeamUpdate}
-              onRemove={onTeamRemove}
-            />
+            <div key={member.id}>
+              <TeamMemberCard
+                member={member}
+                index={idx}
+                isLead={idx === 0}
+                onUpdate={onTeamUpdate}
+                onRemove={onTeamRemove}
+              />
+              {maxTeamSize != null &&
+                idx === maxTeamSize - 1 &&
+                teamMembers.length > maxTeamSize && (
+                  <p className="team-warning">
+                    {buildTeamWarning(teamMembers.length, minTeamSize, maxTeamSize)}
+                  </p>
+                )}
+            </div>
           ))}
         </div>
 
         <div className="team-controls">
+          {minTeamSize != null && teamMembers.length < minTeamSize && (
+            <p className="team-warning">
+              {buildTeamWarning(teamMembers.length, minTeamSize, maxTeamSize)}
+            </p>
+          )}
           <button type="button" className="add-team-member-btn" onClick={onTeamAdd}>
             ➕ Добавить члена коллектива
           </button>
@@ -111,6 +147,6 @@ export default function BudgetSection({
           />
         </div>
       </div>
-    </Section>
+    </>
   );
 }

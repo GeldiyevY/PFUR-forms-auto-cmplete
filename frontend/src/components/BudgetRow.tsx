@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import TextField from './TextField';
 
 interface BudgetRowProps {
@@ -10,7 +11,7 @@ interface BudgetRowProps {
   onChange: (field: 'year1' | 'year2' | 'year3', value: number) => void;
 }
 
-export default function BudgetRow({
+function BudgetRow({
   label,
   year1,
   year2,
@@ -70,3 +71,5 @@ export default function BudgetRow({
     </div>
   );
 }
+
+export default memo(BudgetRow);

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import TextField from './TextField';
 import TextAreaField from './TextAreaField';
 import type { KpiStageData } from '../types/form';
@@ -12,7 +13,7 @@ interface KpiRowProps {
   onChange: (field: keyof KpiStageData, value: string | number) => void;
 }
 
-export default function KpiRow({
+function KpiRow({
   title,
   data,
   stage1Label = '1-й этап',
@@ -65,3 +66,5 @@ export default function KpiRow({
     </div>
   );
 }
+
+export default memo(KpiRow);

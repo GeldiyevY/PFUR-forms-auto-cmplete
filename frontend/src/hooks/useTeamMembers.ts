@@ -28,9 +28,12 @@ export function useTeamMembers(leadName: string) {
 
   const syncLeadName = useCallback(
     (name: string) => {
-      setMembers((prev) =>
-        prev.map((m) => (m.id === 1 ? { ...m, name: name || 'Руководитель проекта' } : m)),
-      );
+      const target = name || 'Руководитель проекта';
+      setMembers((prev) => {
+        const first = prev[0];
+        if (first && first.name === target) return prev;
+        return prev.map((m) => (m.id === 1 ? { ...m, name: target } : m));
+      });
     },
     [],
   );
@@ -40,12 +43,15 @@ export function useTeamMembers(leadName: string) {
     [members],
   );
 
-  return {
-    members,
-    totalSalary,
-    addMember,
-    removeMember,
-    updateMember,
-    syncLeadName,
-  };
+  return useMemo(
+    () => ({
+      members,
+      totalSalary,
+      addMember,
+      removeMember,
+      updateMember,
+      syncLeadName,
+    }),
+    [members, totalSalary, addMember, removeMember, updateMember, syncLeadName],
+  );
 }

@@ -33,15 +33,33 @@ export interface KpiStageData {
   comment: string;
 }
 
+/** A single line inside a criteria-based КПЭ (КПЭ-1/3/5). */
+export interface KpiSubRow {
+  stage1: number;
+  stage2: number;
+  stage3: number;
+  /** Key into the GrantType's criteria dict ('' = none chosen). */
+  criteria: string;
+}
+
+/** Criteria-based КПЭ (КПЭ-1/3/5): several sub-rows + one shared comment. */
+export interface KpiCriteriaRow {
+  rows: KpiSubRow[];
+  comment: string;
+}
+
 export interface KpiData {
-  kpe1: KpiStageData;
+  kpe1: KpiCriteriaRow;
   kpe2: KpiStageData;
-  kpe3: KpiStageData;
+  kpe3: KpiCriteriaRow;
   kpe4: KpiStageData;
-  kpe5: KpiStageData;
+  kpe5: KpiCriteriaRow;
   kpe6: KpiStageData;
   kpe7: KpiStageData;
 }
+
+/** Criteria dict: criteria name -> point multiplier. */
+export type KpiCriteria = Record<string, number>;
 
 export interface BudgetLine {
   year1: number;

@@ -1,4 +1,3 @@
-import Section from '../components/Section';
 import ExpenseCategory from '../components/ExpenseCategory';
 import type { ExpenseCategoryType, ExpenseItem } from '../types/form';
 
@@ -58,12 +57,12 @@ export default function ExpenseBreakdown({
   onRemoveItem,
 }: ExpenseBreakdownProps) {
   return (
-    <Section title="Расшифровка плановых затрат на 1-й этап">
-      <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>
-        Детальная расшифровка всех категорий расходов с автоматическим подсчетом итогов по столбцам
-      </p>
+    <>
+      <p style={{ color: '#666', fontSize: 14, margin: '10px 0 20px' }}>
+      Детальная расшифровка всех категорий расходов с автоматическим подсчетом итогов по столбцам
+    </p>
 
-      {CATEGORIES.map((cat) => (
+    {CATEGORIES.map((cat) => (
         <ExpenseCategory
           key={cat.type}
           category={cat.type}
@@ -77,6 +76,6 @@ export default function ExpenseBreakdown({
           onRemoveItem={onRemoveItem}
         />
       ))}
-    </Section>
+    </>
   );
 }

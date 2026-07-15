@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import TextField from './TextField';
 import type { ExpenseItem, ExpenseCategoryType } from '../types/form';
 
@@ -15,7 +16,7 @@ interface ExpenseItemRowProps {
   onRemove: (category: ExpenseCategoryType, id: number) => void;
 }
 
-export default function ExpenseItemRow({
+function ExpenseItemRow({
   item,
   category,
   prefix,
@@ -83,3 +84,5 @@ export default function ExpenseItemRow({
     </div>
   );
 }
+
+export default memo(ExpenseItemRow);
