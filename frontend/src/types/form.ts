@@ -33,15 +33,38 @@ export interface KpiStageData {
   comment: string;
 }
 
-export interface KpiData {
-  kpe1: KpiStageData;
-  kpe2: KpiStageData;
-  kpe3: KpiStageData;
-  kpe4: KpiStageData;
-  kpe5: KpiStageData;
-  kpe6: KpiStageData;
-  kpe7: KpiStageData;
+/** A single line inside a criteria-based КПЭ (КПЭ-1/3/5). */
+export interface KpiSubRow {
+  stage1: number;
+  stage2: number;
+  stage3: number;
+  /** Key into the GrantType's criteria dict ('' = none chosen). */
+  criteria: string;
 }
+
+/** Criteria-based КПЭ (КПЭ-1/3/5): several sub-rows + one shared comment. */
+export interface KpiCriteriaRow {
+  rows: KpiSubRow[];
+  comment: string;
+}
+
+export interface KpiData {
+  kpe1: KpiCriteriaRow;
+  kpe2: KpiStageData;
+  kpe3: KpiCriteriaRow;
+  kpe4: KpiStageData;
+  kpe5: KpiCriteriaRow;
+  kpe6: KpiStageData;
+  /** Студенты и/или аспиранты в составе научного коллектива (R1 = row 7, D1 = row 10). */
+  kpe7: KpiStageData;
+  /** D1 only: 8. Состав научного коллектива. */
+  kpe8: KpiStageData;
+  /** D1 only: 9. Исследователи в возрасте … */
+  kpe9: KpiStageData;
+}
+
+/** Criteria dict: criteria name -> point multiplier. */
+export type KpiCriteria = Record<string, number>;
 
 export interface BudgetLine {
   year1: number;

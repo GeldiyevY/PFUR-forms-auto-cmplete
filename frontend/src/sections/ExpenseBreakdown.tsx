@@ -1,6 +1,5 @@
-import Section from '../components/Section';
-import ExpenseCategory from '../components/ExpenseCategory';
-import type { ExpenseCategoryType, ExpenseItem } from '../types/form';
+import ExpenseCategory from "../components/ExpenseCategory";
+import type { ExpenseCategoryType, ExpenseItem } from "../types/form";
 
 interface ExpenseBreakdownProps {
   items: Record<ExpenseCategoryType, ExpenseItem[]>;
@@ -12,7 +11,7 @@ interface ExpenseBreakdownProps {
   onUpdateItem: (
     category: ExpenseCategoryType,
     id: number,
-    field: 'name' | 'quantity' | 'price',
+    field: "name" | "quantity" | "price",
     value: string | number,
   ) => void;
   onRemoveItem: (category: ExpenseCategoryType, id: number) => void;
@@ -25,28 +24,29 @@ const CATEGORIES: {
   placeholderName: string;
 }[] = [
   {
-    type: 'equipment',
-    title: '1. Закупка (модернизация) оборудования, материалов, комплектующих',
-    prefix: 'eq',
-    placeholderName: 'Название оборудования',
+    type: "equipment",
+    title: "1. Закупка (модернизация) оборудования, материалов, комплектующих",
+    prefix: "eq",
+    placeholderName: "Название оборудования",
   },
   {
-    type: 'travel',
-    title: '2. Командировки членов научного коллектива',
-    prefix: 'tr',
-    placeholderName: 'Описание командировки',
+    type: "travel",
+    title: "2. Командировки членов научного коллектива",
+    prefix: "tr",
+    placeholderName: "Описание командировки",
   },
   {
-    type: 'services',
-    title: '3. Оплата НТУ / работ сторонних организаций',
-    prefix: 'sv',
-    placeholderName: 'Описание услуги',
+    type: "services",
+    title: "3. Оплата НТУ / работ сторонних организаций",
+    prefix: "sv",
+    placeholderName: "Описание услуги",
   },
   {
-    type: 'other',
-    title: '4. Прочие расходы, непосредственно связанные с выполняемым проектом',
-    prefix: 'ot',
-    placeholderName: 'Описание расхода',
+    type: "other",
+    title:
+      "4. Прочие расходы, непосредственно связанные с выполняемым проектом",
+    prefix: "ot",
+    placeholderName: "Описание расхода",
   },
 ];
 
@@ -58,9 +58,12 @@ export default function ExpenseBreakdown({
   onRemoveItem,
 }: ExpenseBreakdownProps) {
   return (
-    <Section title="Расшифровка плановых затрат на 1-й этап">
-      <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>
-        Детальная расшифровка всех категорий расходов с автоматическим подсчетом итогов по столбцам
+    <>
+      <p style={{ color: "#666", fontSize: 14, margin: "10px 0 20px" }}>
+        Расшифровка плановых затрат на закупку (модернизацию) оборудования,
+        материалов, комплектующих, оплату научно-технических услуг / работ
+        сторонних организаций и прочих расходов, непосредственно связанных с
+        проектом на 1-й этап выполнения проекта:
       </p>
 
       {CATEGORIES.map((cat) => (
@@ -77,6 +80,6 @@ export default function ExpenseBreakdown({
           onRemoveItem={onRemoveItem}
         />
       ))}
-    </Section>
+    </>
   );
 }

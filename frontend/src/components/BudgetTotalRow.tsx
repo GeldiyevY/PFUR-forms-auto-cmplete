@@ -4,6 +4,8 @@ interface BudgetTotalRowProps {
   year3: number;
   grandTotal: number;
   horizon: number;
+  /** Optional warning shown under each year's total field. */
+  warnings?: Partial<Record<1 | 2 | 3, string>>;
 }
 
 export default function BudgetTotalRow({
@@ -12,6 +14,7 @@ export default function BudgetTotalRow({
   year3,
   grandTotal,
   horizon,
+  warnings = {},
 }: BudgetTotalRowProps) {
   const showYear3 = horizon >= 3;
 
@@ -31,6 +34,7 @@ export default function BudgetTotalRow({
             className="readonly-field total-field"
             value={year1.toFixed(1)}
           />
+          {warnings[1] && <div className="threshold-violation">{warnings[1]}</div>}
         </div>
         <div className="form-group">
           <label htmlFor="">
@@ -42,6 +46,7 @@ export default function BudgetTotalRow({
             className="readonly-field total-field"
             value={year2.toFixed(1)}
           />
+          {warnings[2] && <div className="threshold-violation">{warnings[2]}</div>}
         </div>
         {showYear3 && (
           <div className="form-group">
@@ -54,6 +59,7 @@ export default function BudgetTotalRow({
               className="readonly-field total-field"
               value={year3.toFixed(1)}
             />
+            {warnings[3] && <div className="threshold-violation">{warnings[3]}</div>}
           </div>
         )}
         <div className="form-group">

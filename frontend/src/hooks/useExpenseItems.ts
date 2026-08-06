@@ -17,6 +17,7 @@ export function useExpenseItems() {
       ...prev,
       [category]: [...prev[category], { id, name: '', quantity: 0, price: 0 }],
     }));
+    return id;
   }, []);
 
   const removeItem = useCallback((category: ExpenseCategoryType, id: number) => {

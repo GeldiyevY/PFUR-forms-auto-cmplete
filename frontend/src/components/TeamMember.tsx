@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import TextField from './TextField';
 import type { TeamMember as TeamMemberType } from '../types/form';
 
@@ -9,7 +10,7 @@ interface TeamMemberProps {
   onRemove: (id: number) => void;
 }
 
-export default function TeamMemberCard({
+function TeamMemberCard({
   member,
   isLead,
   onUpdate,
@@ -30,7 +31,7 @@ export default function TeamMemberCard({
       <div className="two-column">
         <TextField
           label="ФИО, должность в научном коллективе, доля ставки"
-          value={isLead ? '' : member.name}
+          value={member.name}
           hint={
             isLead
               ? 'Руководитель проекта (автоматически)'
@@ -56,3 +57,5 @@ export default function TeamMemberCard({
     </div>
   );
 }
+
+export default memo(TeamMemberCard);

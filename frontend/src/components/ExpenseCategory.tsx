@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { ExpenseItem, ExpenseCategoryType } from '../types/form';
 import ExpenseItemRow from './ExpenseItemRow';
 
@@ -22,7 +23,7 @@ interface ExpenseCategoryProps {
   onRemoveItem: (category: ExpenseCategoryType, id: number) => void;
 }
 
-export default function ExpenseCategory({
+function ExpenseCategory({
   category,
   title,
   prefix,
@@ -107,3 +108,5 @@ export default function ExpenseCategory({
     </div>
   );
 }
+
+export default memo(ExpenseCategory);
