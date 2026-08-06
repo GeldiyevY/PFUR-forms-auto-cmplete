@@ -43,4 +43,16 @@ export abstract class Category {
     this.saved = undefined;
     this.onRevert?.(reg);
   }
+
+  /**
+   * Discard the saved restriction snapshot without restoring it.
+   *
+   * Called on grant-type switch: the snapshot was captured against a
+   * different grant type's element set, so restoring it onto the new grant
+   * type's elements would clobber intrinsic fields (e.g. KpiElement.grantType,
+   * horizon) with stale values from the previous grant type.
+   */
+  clearSaved(): void {
+    this.saved = undefined;
+  }
 }

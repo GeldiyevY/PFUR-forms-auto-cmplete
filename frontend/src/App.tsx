@@ -27,7 +27,7 @@ const grantTypes: GrantType[] = [
 ];
 
 export default function App() {
-  const { loadTemplates } = useTemplate();
+  const { loadTemplates, checkForUpdates } = useTemplate();
   const { generate } = useDocumentGenerator();
 
   const [templateBuffers, setTemplateBuffers] = useState<Uint8Array[] | null>(
@@ -83,6 +83,12 @@ export default function App() {
   );
 
   useEffect(() => {
+    // Grant type switched: discard the previous grant type's restriction
+    // snapshot so its onDeselect (which runs below with the old applied value
+    // against the NEW element registry) does NOT restore stale intrinsic
+    // fields such as KpiElement.grantType / BudgetElement.grantType (and
+    // horizon, minPoints, etc.) onto the new grant type's elements.
+    appliedCategory.clearSaved();
     setAppliedCategory(new CategoryNone());
   }, [selected]);
 
@@ -106,6 +112,8 @@ export default function App() {
   );
 
   useEffect(() => {
+    // See comment in the category reset effect above.
+    appliedDirection.clearSaved();
     setAppliedDirection(new DirectionNone());
   }, [selected]);
 
@@ -120,6 +128,17 @@ export default function App() {
       setAppliedDirection(next);
     }
   }, [values["project_direction"], selected, registry, appliedDirection]);
+
+  // --- On mount: silently refresh all cached templates in the background ---
+  useEffect(() => {
+    const names: string[] = [];
+    for (const gt of grantTypes) {
+      if (gt.templateName) names.push(gt.templateName);
+      if (gt.applicationName) names.push(gt.applicationName);
+    }
+    const unique = [...new Set(names)];
+    void checkForUpdates(unique);
+  }, [checkForUpdates]);
 
   const handleSelect = useCallback(
     (gt: GrantType) => {
