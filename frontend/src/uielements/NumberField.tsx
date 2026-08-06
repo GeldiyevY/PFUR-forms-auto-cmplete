@@ -1,7 +1,12 @@
-import { TextField } from './TextField';
+import { TextField, type TextFieldInit } from './TextField';
+
+export interface NumberFieldInit extends TextFieldInit {}
 
 export class NumberField extends TextField {
-  constructor(init: { id: string; label: string; hint?: string; required?: boolean }) {
-    super({ ...init, type: 'number' });
+  readonly inputType = 'number';
+
+  constructor(init: NumberFieldInit) {
+    super(init);
+    this.verificationFunction = init.verificationFunction;
   }
 }

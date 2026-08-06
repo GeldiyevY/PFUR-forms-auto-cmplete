@@ -50,5 +50,30 @@ export function useTemplate() {
     }
   }, []);
 
-  return { ...state, loadTemplate };
+  /** Load several templates (each cached independently) and return their buffers in order. */
+  const loadTemplates = useCallback(async (templateNames: string[]): Promise<Uint8Array[]> => {
+    const buffers: Uint8Array[] = [];
+    for (const name of templateNames) {
+      const storageKey = `docx-template:${name}`;
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        console.log(`[template] Loaded "${name}" from cache (localStorage key: ${storageKey})`);
+        buffers.push(base64ToUint8Array(stored));
+        continue;
+      }
+      console.log(`[template] Fetching "${name}" from /${name}.docx`);
+      const response = await fetch(`/${name}.docx`);
+      if (!response.ok) {
+        throw new Error(`Не удалось загрузить шаблон "${name}"`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = new Uint8Array(arrayBuffer);
+      localStorage.setItem(storageKey, uint8ArrayToBase64(buffer));
+      console.log(`[template] Loaded "${name}" from URL and cached it`);
+      buffers.push(buffer);
+    }
+    return buffers;
+  }, []);
+
+  return { ...state, loadTemplate, loadTemplates };
 }

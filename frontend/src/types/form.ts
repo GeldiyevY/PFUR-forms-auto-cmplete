@@ -55,7 +55,12 @@ export interface KpiData {
   kpe4: KpiStageData;
   kpe5: KpiCriteriaRow;
   kpe6: KpiStageData;
+  /** Студенты и/или аспиранты в составе научного коллектива (R1 = row 7, D1 = row 10). */
   kpe7: KpiStageData;
+  /** D1 only: 8. Состав научного коллектива. */
+  kpe8: KpiStageData;
+  /** D1 only: 9. Исследователи в возрасте … */
+  kpe9: KpiStageData;
 }
 
 /** Criteria dict: criteria name -> point multiplier. */

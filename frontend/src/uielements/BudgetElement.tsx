@@ -1,4 +1,4 @@
-import { useEffect, memo } from "react";
+import { useEffect, useState, memo } from "react";
 import type { ReactNode } from "react";
 import { UIElement, type DrawContext, type TestContext } from "./UIElement";
 import BudgetSection from "../sections/BudgetSection";
@@ -7,6 +7,23 @@ import {
   useBudgetCalculations,
   type BudgetKey,
 } from "../hooks/useBudgetCalculations";
+
+export interface BudgetThresholdRule {
+  /** Which budget line this rule applies to (single-line rule). */
+  line?: BudgetKey;
+  /** Several budget lines that are summed and checked together against the year total (group rule). */
+  lines?: BudgetKey[];
+  /** Year the rule applies to. Omit/default = every year. */
+  year?: 1 | 2 | 3 | "all";
+  min?: number;
+  max?: number;
+  /** Field value must be ≤ this fraction of the relevant year total (e.g. 0.1 = 10%). */
+  maxPercent?: number;
+  /** Sum of the specified lines must be ≥ this fraction of the relevant year total (e.g. 0.3 = 30%). */
+  minPercent?: number;
+  /** Optional custom warning message (auto-generated when omitted). */
+  message?: string;
+}
 import { useTeamMembers } from "../hooks/useTeamMembers";
 import { useExpenseItems } from "../hooks/useExpenseItems";
 import type {
@@ -27,6 +44,8 @@ interface BudgetSnapshot {
   expenseItems: Record<ExpenseCategoryType, ExpenseItem[]>;
   horizon: number;
   leadName: string;
+  grantType: "R1" | "D1";
+  leftOverExplanation: string;
 }
 
 export class BudgetElement extends UIElement {
@@ -34,7 +53,13 @@ export class BudgetElement extends UIElement {
   readonly leadFieldId: string;
   minTeamSize?: number;
   maxTeamSize?: number;
+  budgetThresholds: BudgetThresholdRule[] = [];
+  /** Grant type this budget belongs to. Controls the D1-only leftover row. */
+  grantType: "R1" | "D1" = "R1";
   snapshot: BudgetSnapshot | null = null;
+  /** D1-only free-text justification for the leftover of funds (п.6.4). */
+  leftOverExplanation: string = "";
+  setLeftOverExplanation: (v: string) => void = () => {};
   api: {
     updateLine?: (
       k: BudgetKey,
@@ -62,11 +87,15 @@ export class BudgetElement extends UIElement {
     leadFieldId?: string;
     minTeamSize?: number;
     maxTeamSize?: number;
+    budgetThresholds?: BudgetThresholdRule[];
+    grantType?: "R1" | "D1";
   }) {
     super({ id: "budget_table", label: "Смета расходов" });
     this.leadFieldId = init?.leadFieldId ?? "head_of_project";
     this.minTeamSize = init?.minTeamSize;
     this.maxTeamSize = init?.maxTeamSize;
+    this.budgetThresholds = init?.budgetThresholds ?? [];
+    this.grantType = init?.grantType ?? "R1";
   }
 
   collectFor(): Record<string, unknown> {
@@ -86,6 +115,8 @@ export class BudgetElement extends UIElement {
         leadName={ctx.values[this.leadFieldId] || ""}
         minTeamSize={this.minTeamSize}
         maxTeamSize={this.maxTeamSize}
+        budgetThresholds={this.budgetThresholds}
+        grantType={this.grantType}
       />
     );
   }
@@ -141,6 +172,12 @@ export class BudgetElement extends UIElement {
       api.updateExpenseItem!("equipment", id, "quantity", item.quantity);
       api.updateExpenseItem!("equipment", id, "price", item.price);
     });
+
+    if (this.grantType === "D1") {
+      this.setLeftOverExplanation(
+        "Остаток средств от объёма, предусмотренного п.6.4 конкурсной документации, отсутствует.",
+      );
+    }
   }
 }
 
@@ -163,6 +200,10 @@ function buildBudgetPayload(snapshot: BudgetSnapshot): Record<string, unknown> {
   payload["f4_7_2"] = year2Total.toFixed(1);
   payload["f4_7_4"] = grandTotal.toFixed(1);
   payload["f4_sum"] = teamTotalSalary.toFixed(1);
+
+  if (snapshot.grantType === "D1") {
+    payload["left_over_explanation"] = snapshot.leftOverExplanation;
+  }
 
   const lineConfig: { key: BudgetKey; idx: number }[] = [
     { key: "payroll", idx: 1 },
@@ -275,20 +316,30 @@ const BudgetElementView = memo(function BudgetElementView({
   leadName,
   minTeamSize,
   maxTeamSize,
+  budgetThresholds,
+  grantType,
 }: {
   element: BudgetElement;
   horizon: number;
   leadName: string;
   minTeamSize?: number;
   maxTeamSize?: number;
+  budgetThresholds?: BudgetThresholdRule[];
+  grantType: "R1" | "D1";
 }) {
   const budget = useBudgetCalculations(horizon);
   const team = useTeamMembers(leadName);
   const expenses = useExpenseItems();
+  const [leftOverExplanation, setLeftOverExplanation] = useState("");
 
   useEffect(() => {
     team.syncLeadName(leadName);
   }, [leadName]);
+
+  useEffect(() => {
+    element.leftOverExplanation = leftOverExplanation;
+    element.setLeftOverExplanation = setLeftOverExplanation;
+  }, [leftOverExplanation, element]);
 
   useEffect(() => {
     element.snapshot = {
@@ -303,6 +354,8 @@ const BudgetElementView = memo(function BudgetElementView({
       expenseItems: expenses.items,
       horizon,
       leadName,
+      grantType,
+      leftOverExplanation,
     };
     element.api = {
       updateLine: budget.updateLine,
@@ -325,6 +378,8 @@ const BudgetElementView = memo(function BudgetElementView({
     expenses.items,
     horizon,
     leadName,
+    grantType,
+    leftOverExplanation,
   ]);
 
   return (
@@ -347,6 +402,7 @@ const BudgetElementView = memo(function BudgetElementView({
         detail={element.detail}
         minTeamSize={minTeamSize}
         maxTeamSize={maxTeamSize}
+        budgetThresholds={budgetThresholds}
       />
       <ExpenseBreakdown
         items={expenses.items}
@@ -355,6 +411,23 @@ const BudgetElementView = memo(function BudgetElementView({
         onUpdateItem={expenses.updateItem}
         onRemoveItem={expenses.removeItem}
       />
+      {grantType === "D1" && (
+        <div className="form-group">
+          <label htmlFor="left_over_explanation">
+            <strong>
+              5. Размер и обоснование остатка средств от объема,
+              предусмотренного п.6.4 конкурсной документации (при наличии).
+            </strong>
+          </label>
+          <textarea
+            id="left_over_explanation"
+            name="left_over_explanation"
+            rows={4}
+            value={leftOverExplanation}
+            onChange={(e) => setLeftOverExplanation(e.target.value)}
+          />
+        </div>
+      )}
     </>
   );
 });

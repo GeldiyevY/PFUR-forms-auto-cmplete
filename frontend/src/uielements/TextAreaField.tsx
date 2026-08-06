@@ -18,7 +18,7 @@ export class TextAreaField extends UIElement {
     this.maxChar = init.maxChar;
   }
 
-  check(value: string): string | null {
+  check(value: string, _ctx?: DrawContext): string | null {
     const len = value.trim().length;
     if (this.minChar && len > 0 && len < this.minChar) {
       return `Минимум символов: ${this.minChar} (сейчас ${len})`;
@@ -45,7 +45,7 @@ function TextAreaFieldView({
   const value = ctx.value ?? '';
   const empty = value.trim() === '';
   const active = focused || !empty;
-  const warning = element.check(value);
+    const warning = element.verify(value, ctx);
   const placeholder = empty && !focused && element.hint ? element.hint : undefined;
   const below = warning
     ? { text: warning, color: '#e65100' }

@@ -2,17 +2,19 @@ import { useCallback } from 'react';
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import { saveAs } from 'file-saver';
+import { mergeDocxBuffers } from '../utils/mergeDocx';
 
 interface GenerateInput {
-  templateBuffer: Uint8Array;
+  templateBuffers: Uint8Array[];
   payload: Record<string, unknown>;
-  templateName: string;
+  templateName: string | null;
 }
 
 export function useDocumentGenerator() {
   const generate = useCallback(
-    async ({ templateBuffer, payload, templateName: _templateName }: GenerateInput): Promise<void> => {
-      const zip = new PizZip(templateBuffer);
+    async ({ templateBuffers, payload, templateName: _templateName }: GenerateInput): Promise<void> => {
+      const merged = mergeDocxBuffers(templateBuffers);
+      const zip = new PizZip(merged);
       const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,

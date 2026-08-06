@@ -6,7 +6,6 @@ import { FieldInfo } from './FieldInfo';
 export interface TextFieldInit extends UIElementInit {
   minChar?: number;
   maxChar?: number;
-  type?: 'text' | 'number' | 'date';
   readOnly?: boolean;
   inputClassName?: string;
 }
@@ -14,20 +13,19 @@ export interface TextFieldInit extends UIElementInit {
 export class TextField extends UIElement {
   minChar?: number;
   maxChar?: number;
-  readonly type: 'text' | 'number' | 'date';
   readonly readOnly: boolean;
   readonly inputClassName?: string;
+  readonly inputType: string = 'text';
 
   constructor(init: TextFieldInit) {
     super(init);
     this.minChar = init.minChar;
     this.maxChar = init.maxChar;
-    this.type = init.type ?? 'text';
     this.readOnly = init.readOnly ?? false;
     this.inputClassName = init.inputClassName;
   }
 
-  check(value: string): string | null {
+  check(value: string, _ctx?: DrawContext): string | null {
     const len = value.trim().length;
     if (this.minChar && len > 0 && len < this.minChar) {
       return `Минимум символов: ${this.minChar} (сейчас ${len})`;
@@ -54,7 +52,7 @@ function TextFieldView({
   const value = ctx.value ?? '';
   const empty = value.trim() === '';
   const active = focused || !empty;
-  const warning = element.check(value);
+    const warning = element.verify(value, ctx);
   const placeholder = empty && !focused && element.hint ? element.hint : undefined;
   const below = warning
     ? { text: warning, color: '#e65100' }
@@ -72,7 +70,7 @@ function TextFieldView({
       <input
         id={element.id}
         name={element.id}
-        type={element.type}
+        type={element.inputType}
         placeholder={placeholder}
         value={value}
         readOnly={element.readOnly}

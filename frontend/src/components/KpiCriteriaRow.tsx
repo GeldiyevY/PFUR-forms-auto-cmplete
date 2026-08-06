@@ -1,6 +1,8 @@
 import { memo } from "react";
 import TextField from "./TextField";
 import TextAreaField from "./TextAreaField";
+import ThresholdHint from "./ThresholdHint";
+import type { RangeInfo } from "../utils/thresholds";
 import type { KpiCriteriaRow as KpiCriteriaRowData, KpiSubRow, KpiCriteria } from "../types/form";
 
 interface KpiCriteriaRowProps {
@@ -15,6 +17,8 @@ interface KpiCriteriaRowProps {
   onCommentChange: (comment: string) => void;
   onAddSubRow: () => void;
   onRemoveSubRow?: (subIndex: number) => void;
+  /** Per sub-row per-stage min/max ranges. Keyed by sub-row index. */
+  thresholdsBySubRow?: Record<number, Partial<Record<"stage1" | "stage2" | "stage3", RangeInfo>>>;
 }
 
 function multiplier(criteria: KpiCriteria, key: string): number {
@@ -38,6 +42,7 @@ function KpiCriteriaRow({
   onCommentChange,
   onAddSubRow,
   onRemoveSubRow,
+  thresholdsBySubRow,
 }: KpiCriteriaRowProps) {
   const stages: (keyof KpiSubRow)[] = horizon >= 3 ? ["stage1", "stage2", "stage3"] : ["stage1", "stage2"];
   const stageLabels: Record<keyof KpiSubRow, string> = {
@@ -60,34 +65,43 @@ function KpiCriteriaRow({
 
       {data.rows.map((row, i) => (
         <div className="kpe-row kpi-criteria-subrow" key={i}>
-          <TextField
-            label={stage1Label}
-            type="number"
-            min="0"
-            hint="0"
-            showHintBelowField={false}
-            value={row.stage1 || ""}
-            onChange={(v) => onSubRowChange(i, "stage1", v === "" ? 0 : parseFloat(v))}
-          />
-          <TextField
-            label={stage2Label}
-            type="number"
-            min="0"
-            hint="0"
-            showHintBelowField={false}
-            value={row.stage2 || ""}
-            onChange={(v) => onSubRowChange(i, "stage2", v === "" ? 0 : parseFloat(v))}
-          />
-          {horizon >= 3 && (
+          <div>
             <TextField
-              label={stage3Label}
+              label={stage1Label}
               type="number"
               min="0"
-              hint="0"
+              hint="-"
               showHintBelowField={false}
-              value={row.stage3 || ""}
-              onChange={(v) => onSubRowChange(i, "stage3", v === "" ? 0 : parseFloat(v))}
+              value={row.stage1 || ""}
+              onChange={(v) => onSubRowChange(i, "stage1", v === "" ? 0 : parseFloat(v))}
             />
+            <ThresholdHint value={row.stage1} range={thresholdsBySubRow?.[i]?.stage1} />
+          </div>
+          <div>
+            <TextField
+              label={stage2Label}
+              type="number"
+              min="0"
+              hint="-"
+              showHintBelowField={false}
+              value={row.stage2 || ""}
+              onChange={(v) => onSubRowChange(i, "stage2", v === "" ? 0 : parseFloat(v))}
+            />
+            <ThresholdHint value={row.stage2} range={thresholdsBySubRow?.[i]?.stage2} />
+          </div>
+          {horizon >= 3 && (
+            <div>
+              <TextField
+                label={stage3Label}
+                type="number"
+                min="0"
+                hint="-"
+                showHintBelowField={false}
+                value={row.stage3 || ""}
+                onChange={(v) => onSubRowChange(i, "stage3", v === "" ? 0 : parseFloat(v))}
+              />
+              <ThresholdHint value={row.stage3} range={thresholdsBySubRow?.[i]?.stage3} />
+            </div>
           )}
           <div className="form-group kpi-criteria-select">
             <label>{stageLabels.criteria}</label>

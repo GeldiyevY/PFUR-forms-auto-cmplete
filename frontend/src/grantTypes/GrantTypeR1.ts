@@ -1,5 +1,7 @@
 import { GrantType } from "./GrantType";
 import { TextField } from "../uielements/TextField";
+import { NumberField } from "../uielements/NumberField";
+import type { DrawContext } from "../uielements/UIElement";
 import { TextAreaField } from "../uielements/TextAreaField";
 import { SelectField } from "../uielements/SelectField";
 import { CategorySelector } from "../uielements/CategorySelector";
@@ -9,19 +11,84 @@ import { ScienceFieldApplied } from "../science_field/ScienceFieldApplied";
 import { ScienceFieldFundamental } from "../science_field/ScienceFieldFundamental";
 import { KpiElement } from "../uielements/KpiElement";
 import { BudgetElement } from "../uielements/BudgetElement";
+import { Row } from "../uielements/Row";
+import {
+  RowElementTextField,
+  RowElementNumberField,
+} from "../uielements/RowElement";
 import { CategoryA } from "../categories/CategoryA";
 import { CategoryB } from "../categories/CategoryB";
+import { DirectionNaturalScience } from "../direction/DirectionNaturalScience";
+import { DirectionSocialScience } from "../direction/DirectionSocialScience";
+
+const pubMinByDirSf: Record<string, Record<string, number>> = {
+  Естественнонаучное: { Фундаментальное: 4, Прикладное: 3 },
+  "Социально-гуманитарное": { Фундаментальное: 3, Прикладное: 2 },
+};
+
+function pubVerification(value: string, otherId: string, reg: DrawContext) {
+  const v = parseInt(value, 10);
+  const otherV = parseInt(reg.values[otherId] ?? "", 10);
+  if (isNaN(v) && isNaN(otherV)) return null;
+  const total = (isNaN(v) ? 0 : v) + (isNaN(otherV) ? 0 : otherV);
+
+  const dir = reg.values["project_direction"] ?? "";
+  const sf = reg.values["research_direction"] ?? "";
+  const min = pubMinByDirSf[dir]?.[sf] ?? null;
+  if (min === null) return null;
+
+  if (total < min) {
+    return `Минимальное количество публикаций WoS + Scopus: ${min} (сейчас ${total})`;
+  }
+  return null;
+}
 
 export class GrantTypeR1 extends GrantType {
   name = "R.1";
   templateName = "grant_type_r1_template";
+  // applicationName = "applicationR1";
   formTitles = [
     "Форма 1. Общие сведения о научном проекте",
     "Форма 2. Содержание научного проекта",
     "Форма 3. Плановые ключевые показатели эффективности проекта",
     "Форма 4. Проект сметы расходов основных средств гранта",
-    "Анкета Руководителя Проекта",
     "Гарантийное письмо",
+  ];
+
+  directionTitle =
+    "Направление науки (улучшает подсказки, не влияет на генерацию документа)";
+
+  directions = [
+    new DirectionNaturalScience({
+      onApply: (reg) => {
+        reg.get<KpiElement>("kpi_table")?.copyWith({
+          // КПЭ-2 «Привлечение внешнего финансирования» — не менее 700 тыс. руб. ежегодно
+          kpiThresholds: [{ field: "kpe2", stage: "all", min: 700 }],
+        });
+        reg.get<BudgetElement>("budget_table")?.copyWith({
+          // не более 10% от общего объема финансирования этапа
+          // (п.6.3.3 КД; оплата публикаций Open Access в этот лимит не входит).
+          budgetThresholds: [
+            { line: "services", year: "all", maxPercent: 0.1 },
+          ],
+        });
+      },
+    }),
+
+    new DirectionSocialScience({
+      onApply: (reg) => {
+        reg.get<KpiElement>("kpi_table")?.copyWith({
+          // КПЭ-2 «Привлечение внешнего финансирования» — не менее 300 тыс. руб. ежегодно
+          kpiThresholds: [{ field: "kpe2", stage: "all", min: 300 }],
+        });
+        reg.get<BudgetElement>("budget_table")?.copyWith({
+          // НТУ ≤ 10% — то же правило, что и для естественнонаучного (п.6.3.3).
+          budgetThresholds: [
+            { line: "services", year: "all", maxPercent: 0.1 },
+          ],
+        });
+      },
+    }),
   ];
 
   form1 = [
@@ -216,6 +283,7 @@ export class GrantTypeR1 extends GrantType {
 
   form3 = [
     new KpiElement({
+      grantType: "R1",
       firstFieldCriteria: {
         "Top 1%": 40,
         "Top 5%": 30,
@@ -232,21 +300,513 @@ export class GrantTypeR1 extends GrantType {
         "Патент на полезную модель, промышленный образец": 15,
         "Программа ЭВМ, БД, топология интегральных микросхем": 5,
       },
-      minTotalPoints: {
-        А: 165,
-        Б: 70,
+      minPoints: {
+        А: [
+          {
+            direction: "others",
+            minPerStage: [{ stage: 1, min: 33 }],
+            minTotal: 165,
+          },
+        ],
+        Б: [
+          {
+            direction: "others",
+            minPerStage: [{ stage: 1, min: 24.5 }],
+            minTotal: 70,
+          },
+        ],
       },
+      requiredKpi: {
+        Фундаментальное: [
+          { field: "kpe1", min: 1 },
+          { field: "kpe3", min: 1 },
+        ],
+        Прикладное: [
+          { field: "kpe3", min: 1 },
+          { field: "kpe4", min: 1 },
+          { field: "kpe5", min: 1, fromStage: 2 },
+        ],
+      },
+      minStudents: 1,
     }),
   ];
 
   form4 = [
     new BudgetElement({
       leadFieldId: "head_of_project",
+      grantType: "R1",
       minTeamSize: 1,
     }),
   ];
 
-  application = [];
+  applicationTitle = "Анкета Руководителя Проекта";
+  applicationName = "application_template_r";
+  application = [
+    new DateField({
+      id: "birth_date",
+      label: "Дата рождения",
+      emptyValue: "",
+      testValue: "1980-05-15",
+      verificationFunction: (value, reg) => {
+        if (!value) return null;
+        const cutoff =
+          reg.category.code === "А"
+            ? "2028-12-31"
+            : reg.category.code === "Б"
+              ? "2027-12-31"
+              : null;
+        if (!cutoff) return null;
+        const birth = new Date(value);
+        const end = new Date(cutoff);
+        if (isNaN(birth.getTime()) || isNaN(end.getTime())) return null;
+        let age = end.getFullYear() - birth.getFullYear();
+        const m = end.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && end.getDate() < birth.getDate())) age--;
+
+        const hasDegree = (reg.values["academic_degree"] ?? "").trim() !== "";
+        if (hasDegree) {
+          if (age > 39) {
+            return `Возраст на ${cutoff} не должен превышать 39 лет (с учёной степенью); сейчас ${age}`;
+          }
+          return null;
+        }
+        if (age > 35) {
+          return `Возраст на ${cutoff} не должен превышать 35 лет (без учёной степени); сейчас ${age}`;
+        }
+        return null;
+      },
+    }),
+    new TextField({
+      id: "citizenship",
+      label:
+        "Гражданство (для лиц, имеющих второе гражданство указать через запятую)",
+      emptyValue: "",
+      testValue: "Российская Федерация",
+    }),
+
+    // ── Образование ──
+    new TextAreaField({
+      id: "education",
+      label: "Образование, наименование университета и год окончания обучения",
+      emptyValue: "",
+      testValue: "Высшее, МГУ им. М.В. Ломоносова, факультет ВМК, 2002 г.",
+    }),
+    new TextAreaField({
+      id: "academic_degree",
+      label: "Ученая степень, наименование университета, год получения степени",
+      emptyValue: "",
+      testValue: "Доктор технических наук, МГУ им. М.В. Ломоносова, 2012 г.",
+    }),
+
+    // ── Место жительства ──
+    new TextField({
+      id: "residence_country",
+      label: "Страна",
+      emptyValue: "",
+      testValue: "Россия",
+    }),
+    new TextField({
+      id: "residence_postal_address",
+      label: "Почтовый адрес",
+      emptyValue: "",
+      testValue: "117198, г. Москва, ул. Миклухо-Маклая, д. 6",
+    }),
+    new TextField({
+      id: "residence_phone",
+      label: "Телефон",
+      emptyValue: "",
+      testValue: "+7 999 000-00-00",
+    }),
+    new TextField({
+      id: "residence_email",
+      label: "Е-mail",
+      emptyValue: "",
+      testValue: "ivanov@example.ru",
+    }),
+
+    // ── Основное место работы / последнее место работы ──
+    new TextField({
+      id: "main_work_organization",
+      label: "Полное наименование организации, годы работы",
+      emptyValue: "",
+      testValue: "Российский университет дружбы народов имени Патриса Лумумбы",
+    }),
+    new TextField({
+      id: "main_work_position",
+      label: "Должность",
+      emptyValue: "",
+      testValue: "Профессор",
+    }),
+    new TextField({
+      id: "main_work_years",
+      label: "Годы работы (с указанием до месяцев)",
+      hint: "например, 09.2012 – по н.в.",
+      emptyValue: "",
+      testValue: "09.2012 – по настоящее время",
+    }),
+    new TextField({
+      id: "main_work_country",
+      label: "Страна",
+      emptyValue: "",
+      testValue: "Россия",
+    }),
+    new TextField({
+      id: "main_work_postal_address",
+      label: "Почтовый адрес",
+      emptyValue: "",
+      testValue: "117198, г. Москва, ул. Миклухо-Маклая, д. 6",
+    }),
+    new TextField({
+      id: "main_work_phone",
+      label: "Телефон",
+      emptyValue: "",
+      testValue: "+7 495 000-00-00",
+    }),
+    new TextField({
+      id: "main_work_fax",
+      label: "Факс",
+      emptyValue: "",
+      testValue: "+7 495 000-00-01",
+    }),
+    new TextField({
+      id: "main_work_email",
+      label: "Е-mail",
+      emptyValue: "",
+      testValue: "ivanov@rudn.ru",
+    }),
+
+    // ── Предыдущие места работы ──
+    new TextField({
+      id: "prev_work_organization",
+      label: "Полное наименование организации, годы работы",
+      emptyValue: "",
+      testValue: "МГУ им. М.В. Ломоносова",
+    }),
+    new TextField({
+      id: "prev_work_position",
+      label: "Должность",
+      emptyValue: "",
+      testValue: "Доцент",
+    }),
+    new TextField({
+      id: "prev_work_years",
+      label: "Годы работы (с указанием до месяцев)",
+      emptyValue: "",
+      testValue: "09.2005 – 08.2012",
+    }),
+    new TextField({
+      id: "prev_work_country",
+      label: "Страна",
+      emptyValue: "",
+      testValue: "Россия",
+    }),
+    new TextField({
+      id: "prev_work_postal_address",
+      label: "Почтовый адрес",
+      emptyValue: "",
+      testValue: "119991, г. Москва, Ленинские горы, д. 1",
+    }),
+    new TextField({
+      id: "prev_work_phone",
+      label: "Телефон",
+      emptyValue: "",
+      testValue: "+7 495 000-00-02",
+    }),
+    new TextField({
+      id: "prev_work_fax",
+      label: "Факс",
+      emptyValue: "",
+      testValue: "+7 495 000-00-03",
+    }),
+    new TextField({
+      id: "prev_work_email",
+      label: "Е-mail",
+      emptyValue: "",
+      testValue: "ivanov@msu.ru",
+    }),
+
+    // ── Профили в базах данных научного цитирования ──
+    new TextField({
+      id: "researchgate_url",
+      label: "ResearchGate (ссылка на аккаунт)",
+      emptyValue: "",
+      testValue: "https://www.researchgate.net/profile/Ivan-Ivanov",
+    }),
+    new TextField({
+      id: "google_scholar_url",
+      label: "Google Scholar (ссылка на аккаунт)",
+      emptyValue: "",
+      testValue: "https://scholar.google.com/citations?user=XXXXXXX",
+    }),
+    new TextField({
+      id: "scopus_author_id",
+      label: "Scopus Author ID (или ссылка на аккаунт)",
+      emptyValue: "",
+      testValue: "57190000000",
+    }),
+    new TextField({
+      id: "researcher_id_wos",
+      label: "Researcher ID Web of Science",
+      emptyValue: "",
+      testValue: "AAA-1234-2020",
+    }),
+    new TextField({
+      id: "orcid_id",
+      label: "ORCID ID",
+      emptyValue: "",
+      testValue: "0000-0002-1825-0097",
+    }),
+    new TextField({
+      id: "spin_code_rinc",
+      label: "SPIN-код автора в РИНЦ",
+      emptyValue: "",
+      testValue: "1234-5678",
+    }),
+
+    // ── Наукометрические показатели ──
+    // Количество публикаций (всего / за период с 01.01.2021)
+    new NumberField({
+      id: "publications_count_wos",
+      label: "Количество публикаций WoS (всего / с 01.01.2021)",
+      emptyValue: "",
+      testValue: "45",
+      verificationFunction: (value, reg) =>
+        pubVerification(value, "publications_count_scopus", reg),
+    }),
+    new NumberField({
+      id: "publications_count_scopus",
+      label: "Количество публикаций Scopus (всего / с 01.01.2021)",
+      emptyValue: "",
+      testValue: "52",
+      verificationFunction: (value, reg) =>
+        pubVerification(value, "publications_count_wos", reg),
+    }),
+    new NumberField({
+      id: "publications_count_rinc",
+      label: "Количество публикаций РИНЦ (при наличии)",
+      emptyValue: "",
+      testValue: "80",
+    }),
+    // Количество цитирований (всего / за период с 01.01.2021)
+    new NumberField({
+      id: "citations_count_wos",
+      label: "Количество цитирований WoS (всего / с 01.01.2021)",
+      emptyValue: "",
+      testValue: "600",
+    }),
+    new NumberField({
+      id: "citations_count_scopus",
+      label: "Количество цитирований Scopus (всего / с 01.01.2021)",
+      emptyValue: "",
+      testValue: "720",
+    }),
+    new NumberField({
+      id: "citations_count_rinc",
+      label: "Количество цитирований РИНЦ (при наличии)",
+      emptyValue: "",
+      testValue: "1500",
+    }),
+    new TextField({
+      id: "hirsch_index",
+      label: "Индекс Хирша (WoS / Scopus / РИНЦ)",
+      hint: "формат: WoS / Scopus / РИНЦ",
+      emptyValue: "",
+      testValue: "12 / 14 / 20",
+    }),
+
+    // ── 1.1. Научная деятельность и основные научные достижения ──
+    new Row({
+      id: "scientific_activity",
+      label:
+        "Научная деятельность члена научного коллектива, его основные научные достижения (перечислить)",
+      increasable: true,
+      elements: [
+        new RowElementTextField({
+          id: "activity",
+          label: "Достижение",
+          testValue:
+            "Разработка алгоритмов глубокого обучения для анализа медицинских изображений",
+        }),
+      ],
+    }),
+
+    // ── 1.2. Премии и награды ──
+    new Row({
+      id: "awards",
+      label:
+        "Премии и награды члена научного коллектива (международные, государственные)",
+      increasable: true,
+      elements: [
+        new RowElementTextField({
+          id: "name",
+          label: "Название премии/награды",
+          testValue: "Премия за вклад в медицинскую информатику",
+        }),
+        new RowElementTextField({
+          id: "issuer",
+          label: "Кем выдана",
+          testValue: "РУДН",
+        }),
+        new RowElementNumberField({
+          id: "year",
+          label: "Год получения",
+          hint: "ГГГГ",
+          testValue: "2024",
+        }),
+        new RowElementTextField({
+          id: "achievement",
+          label: "Достижение, за которое вручена премия/награда",
+          testValue: "Создание системы ИИ-диагностики",
+        }),
+      ],
+    }),
+
+    // ── 1.3. Ключевые публикации ──
+    new Row({
+      id: "publications",
+      label:
+        "Ключевые публикации по направлению тематики проекта (не более 10, за период с 01.01.2021)",
+      increasable: true,
+      maxRows: 10,
+      elements: [
+        new RowElementTextField({
+          id: "source",
+          label: "Издание",
+          testValue: "IEEE Transactions on Medical Imaging",
+        }),
+        new RowElementTextField({
+          id: "authors",
+          label: "Авторы (в порядке, указанном в публикации)",
+          testValue: "Ivanov I., Petrov P.",
+        }),
+        new RowElementTextField({
+          id: "title",
+          label: "Название публикации",
+          testValue: "Deep Learning for Cancer Detection",
+        }),
+        new RowElementTextField({
+          id: "type",
+          label: "Вид публикации",
+          testValue: "Статья",
+        }),
+        new RowElementTextField({
+          id: "year_volume",
+          label: "Год, том, выпуск",
+          testValue: "2023, т. 42, вып. 5",
+        }),
+        new RowElementTextField({
+          id: "doi",
+          label: "DOI",
+          testValue: "10.1109/TMI.2023.0000000",
+        }),
+      ],
+    }),
+
+    // ── 1.4. РИД и заявки на регистрацию РИД ──
+    new Row({
+      id: "rids",
+      label:
+        "РИД и заявки на регистрацию РИД по направлению тематики проекта (за период с 01.01.2021)",
+      increasable: true,
+      minRowsByScience: { Фундаментальное: 0, Прикладное: 1 },
+      elements: [
+        new RowElementTextField({
+          id: "name",
+          label: "Наименование патента, год выхода",
+          testValue: "Способ автоматической диагностики, 2023",
+        }),
+        new RowElementTextField({
+          id: "authors",
+          label: "Авторы (с указанием патентообладателя)",
+          testValue: "Иванов И.И. (патентообладатель РУДН)",
+        }),
+        new RowElementTextField({
+          id: "details",
+          label: "Выходные данные",
+          testValue: "Патент РФ № 2700000, опубл. 01.06.2023",
+        }),
+      ],
+    }),
+
+    // ── 1.5. Конференции ──
+    new Row({
+      id: "conferences",
+      label:
+        "Конференции по направлению тематики проекта (за период с 01.01.2021)",
+      increasable: true,
+      elements: [
+        new RowElementTextField({
+          id: "name",
+          label: "Название конференции",
+          testValue: "MICCAI 2023",
+        }),
+        new RowElementTextField({
+          id: "place_time",
+          label: "Место и время проведения",
+          testValue: "Ванкувер, Канада, октябрь 2023",
+        }),
+        new RowElementTextField({
+          id: "url",
+          label: "Ссылка на сайт конференции в сети Интернет",
+          testValue: "https://miccai2023.org",
+        }),
+        new RowElementTextField({
+          id: "report",
+          label: "Авторы и название доклада",
+          testValue: "Ivanov I. AI-based diagnostics",
+        }),
+        new RowElementTextField({
+          id: "type",
+          label: "Тип доклада (пленарный, обычный, устный/постер)",
+          testValue: "устный",
+        }),
+      ],
+    }),
+
+    // ── 1.6. Участие в научных проектах (грантах) ──
+    new Row({
+      id: "projects",
+      label:
+        "Участие в научных проектах (грантах), хоздоговорных НИР, НИР по гос. заданию (за период с 01.01.2021)",
+      increasable: true,
+      elements: [
+        new RowElementTextField({
+          id: "fund",
+          label: "Фонд (источник финансирования)",
+          testValue: "РНФ",
+        }),
+        new RowElementTextField({
+          id: "name_number",
+          label:
+            "Название проекта, номер проекта по классификации источника финансирования",
+          testValue: "ИИ в медицине, № 23-00-00000",
+        }),
+        new RowElementTextField({
+          id: "egisu_number",
+          label: "Номер регистрационной карты проекта в системе ЕГИСУ НИОКТР",
+          testValue: "АААА-А23-000000000000-0",
+        }),
+        new RowElementTextField({
+          id: "years_funding",
+          label: "Годы реализации, объем финансирования",
+          testValue: "2023–2025, 5 млн руб.",
+        }),
+        new RowElementTextField({
+          id: "role",
+          label: "Должность (исполнитель / руководитель)",
+          testValue: "руководитель",
+        }),
+      ],
+    }),
+
+    // ── 1.7. Дополнительная информация ──
+    new TextAreaField({
+      id: "additional_info",
+      label: "Дополнительная информация о себе",
+      emptyValue: "",
+      testValue: "Член редколлегии профильного журнала, эксперт РНФ.",
+    }),
+  ];
 
   guaranteeLetter = [
     new TextField({
@@ -305,11 +865,24 @@ export class GrantTypeR1 extends GrantType {
       hint: "Деятельность в соответствии с ОКВЭД",
       testValue: "45.44.1",
     }),
-    new TextField({
-      id: "head_of_org_occupation",
-      label: "Руководитель организации (Должность)",
-      hint: "Должность",
-      testValue: "CEO",
+    new NumberField({
+      id: "cofinance_stage_1",
+      label: "Готовность софинансирования проекта на 1 этапе в размере",
+      hint: "_________ руб.",
+      testValue: "1000",
+    }),
+    new NumberField({
+      id: "cofinance_stage_2",
+      label: "Готовность софинансирования проекта на 2 этапе в размере",
+      hint: "_________ руб.",
+      testValue: "1000",
+    }),
+    new NumberField({
+      id: "cofinance_stage_3",
+      label: "Готовность софинансирования проекта на 3 этапе в размере",
+      hint: "_________ руб. (при наличии)",
+      testValue: "1000",
+      showWhen: (ctx) => ctx.category.code === "А" || ctx.category.code === "",
     }),
     new TextField({
       id: "head_of_organization",
@@ -318,22 +891,10 @@ export class GrantTypeR1 extends GrantType {
       testValue: "В.П. Филиппов",
     }),
     new TextField({
-      id: "head_acc_of_org_occupation",
-      label: "Главный бухгалтер организации (Должность)",
-      hint: "Должность",
-      testValue: "Бухгалтер",
-    }),
-    new TextField({
       id: "head_acc_of_org",
       label: "Главный бухгалтер организации",
       hint: "инициалы и фамилия",
       testValue: "А.В. Сидорова",
-    }),
-    new TextField({
-      id: "position",
-      label: "Должность",
-      hint: "Название должности",
-      testValue: "Ректор университета",
     }),
   ];
 }
