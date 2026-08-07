@@ -370,7 +370,7 @@ export default function App() {
       </div>
       <footer className="footer">
         <a
-          href="https://t.me/he11ohi"
+          href="https://github.com/GeldiyevY"
           target="_blank"
           rel="noopener noreferrer"
           className="footer-link"
