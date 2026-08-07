@@ -196,6 +196,7 @@ function buildBudgetPayload(snapshot: BudgetSnapshot): Record<string, unknown> {
   } = snapshot;
 
   if (horizon >= 3) payload["f4_7_3"] = year3Total.toFixed(1);
+  else payload["f4_7_3"] = "0.0";
   payload["f4_7_1"] = year1Total.toFixed(1);
   payload["f4_7_2"] = year2Total.toFixed(1);
   payload["f4_7_4"] = grandTotal.toFixed(1);
