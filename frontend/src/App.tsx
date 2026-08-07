@@ -324,7 +324,12 @@ export default function App() {
                         <h2 className="form-card-title">{card.title}</h2>
                         {card.form.map((el) => (
                           <Fragment key={el.id}>
-                            {el.isVisible({ value: values[el.id] ?? "", onChange: (v) => updateField(el.id, v), category, values }) &&
+                            {el.isVisible({
+                              value: values[el.id] ?? "",
+                              onChange: (v) => updateField(el.id, v),
+                              category,
+                              values,
+                            }) &&
                               el.draw({
                                 value: values[el.id] ?? "",
                                 onChange: (v) => updateField(el.id, v),
@@ -369,15 +374,25 @@ export default function App() {
         </div>
       </div>
       <footer className="footer">
+        Создано{" "}
         <a
           href="https://github.com/GeldiyevY"
           target="_blank"
           rel="noopener noreferrer"
           className="footer-link"
         >
-          Создано yhlasgeldiyev7@gmail.com. Нажмите если нашли баг или нужно
-          сделать сайт или приложение?
-        </a>
+          Yhlas Geldiyev
+        </a>{" "}
+        and{" "}
+        <a
+          href="https://github.com/SealDogg"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="footer-link"
+        >
+          Yaroslav Merkulov
+        </a>{" "}
+        . Нажмите если нашли баг или нужно сделать сайт или приложение?
       </footer>
     </>
   );
