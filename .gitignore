@@ -80,6 +80,6 @@ Thumbs.db
 
 # Project specific
 Форма заявки.docx
-utils/
+utils_local/
 opencode.json
 AGENTS.md
